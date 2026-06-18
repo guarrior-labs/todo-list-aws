@@ -1,0 +1,321 @@
+pipeline {
+
+    agent any
+
+    // Opciones generales del pipeline
+    options {
+	// Añade fecha y hora a cada línea del log para facilitar el diagnóstico.
+        timestamps()
+	// Activa el soporte para códigos ANSI de colores.
+        ansiColor('xterm')
+    }
+
+    environment {
+
+        AWS_DEFAULT_REGION = "us-east-1"
+
+        API_URL = ""
+
+        REPORTS = "reports"
+
+    }
+
+    stages {
+
+        /******************************************************************
+         * Inicializa la configuración del pipeline según la rama.
+         ******************************************************************/
+        stage('Initialize') {
+
+            steps {
+
+                script {
+
+                    configurarPipeline()
+
+                }
+
+            }
+
+        }
+
+        /******************************************************************
+         * Descarga el código fuente.
+         ******************************************************************/
+        stage('Get Code') {
+
+            steps {
+
+                checkout scm
+
+            }
+
+        }
+
+        /******************************************************************
+         * Ejecuta Flake8 y Bandit.
+         ******************************************************************/
+        stage('Static Test') {
+
+            when {
+
+                expression {
+
+                    return env.RUN_STATIC == "true"
+
+                }
+
+            }
+
+            steps {
+
+                script {
+
+                    ejecutarAnalisisEstatico()
+
+                }
+
+            }
+
+        }
+
+        /******************************************************************
+         * Construcción y despliegue SAM.
+         ******************************************************************/
+        stage('Deploy') {
+
+            steps {
+
+                script {
+
+                    desplegarSAM()
+
+                    obtenerApiUrl()
+
+                }
+
+            }
+
+        }
+
+        /******************************************************************
+         * Ejecuta pruebas REST.
+         ******************************************************************/
+        stage('Rest Test') {
+
+            steps {
+
+                script {
+
+                    ejecutarPruebas()
+
+                }
+
+            }
+
+        }
+
+        /******************************************************************
+         * Promueve develop hacia master.
+         ******************************************************************/
+        stage('Promote') {
+
+            when {
+
+                branch 'develop'
+
+            }
+
+            steps {
+
+                script {
+
+                    promoverVersion()
+
+                }
+
+            }
+
+        }
+
+    }
+
+    post {
+
+        always {
+
+            archiveArtifacts allowEmptyArchive: true,
+                             artifacts: "${REPORTS}/*"
+
+            junit allowEmptyResults: true,
+                  testResults: "result-rest.xml"
+
+        }
+
+    }
+
+}
+
+/***********************************************************************
+ *
+ * CONFIGURACIÓN DINÁMICA
+ *
+ ***********************************************************************/
+
+def configurarPipeline() {
+
+    echo "Rama detectada: ${env.BRANCH_NAME}"
+
+    switch(env.BRANCH_NAME) {
+
+        case "develop":
+
+            env.CONFIG_ENV="staging"
+
+            env.STACK_NAME="todo-list-aws"
+
+            env.SOURCE_BRANCH="develop"
+
+            env.TARGET_BRANCH="master"
+
+            env.RUN_STATIC="true"
+
+            break
+
+        case "master":
+
+            env.CONFIG_ENV="production"
+
+            env.STACK_NAME="todo-list-aws"
+
+            env.SOURCE_BRANCH="master"
+
+            env.TARGET_BRANCH=""
+
+            env.RUN_STATIC="true"
+
+            break
+
+        default:
+
+            error("Rama no soportada.")
+
+    }
+
+}
+
+/***********************************************************************
+ *
+ * ANÁLISIS ESTÁTICO
+ *
+ ***********************************************************************/
+
+def ejecutarAnalisisEstatico() {
+
+    sh """
+
+        mkdir -p ${REPORTS}
+
+        flake8 src \
+            --statistics \
+            --tee \
+            --output-file ${REPORTS}/flake8.txt
+
+        bandit \
+            -r src \
+            -f txt \
+            -o ${REPORTS}/bandit.txt
+
+    """
+
+}
+
+/***********************************************************************
+ *
+ * DESPLIEGUE
+ *
+ ***********************************************************************/
+
+def desplegarSAM() {
+
+    sh """
+
+        sam build
+
+        sam validate
+
+        sam deploy \
+            --config-env ${CONFIG_ENV} \
+            --resolve-s3
+
+    """
+
+}
+
+/***********************************************************************
+ *
+ * URL DEL API
+ *
+ ***********************************************************************/
+
+def obtenerApiUrl() {
+
+    env.API_URL = sh(
+
+        script: """
+
+        aws cloudformation describe-stacks \
+            --stack-name ${STACK_NAME} \
+            --query "Stacks[0].Outputs[?OutputKey=='ApiUrl'].OutputValue" \
+            --output text
+
+        """,
+
+        returnStdout: true
+
+    ).trim()
+
+    echo "API URL = ${env.API_URL}"
+
+}
+
+/***********************************************************************
+ *
+ * PRUEBAS REST
+ *
+ ***********************************************************************/
+
+def ejecutarPruebas() {
+
+    sh """
+
+        export API_URL=${API_URL}
+
+        pytest \
+            test/integration/todoApiTest.py \
+            --junitxml=result-rest.xml \
+            --exit-zero
+
+    """
+
+}
+
+/***********************************************************************
+ *
+ * PROMOCIÓN
+ *
+ ***********************************************************************/
+
+def promoverVersion() {
+
+    sh """
+
+        git checkout master
+
+        git merge develop
+
+        git push origin master
+
+    """
+
+}
