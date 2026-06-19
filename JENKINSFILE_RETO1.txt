@@ -168,6 +168,7 @@ pipeline {
                 {
                 sh '''
                     deleteDir()
+                    cleanWs()
                     git checkout master
                     git pull origin master
                     git merge develop
