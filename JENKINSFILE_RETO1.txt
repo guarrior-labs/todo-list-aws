@@ -4,9 +4,9 @@ pipeline {
 
     /******************************************************************
      * Opciones generales del pipeline.
-     * Se añaden marcas de tiempo y soporte para colores ANSI.
-     * Se deshabilita el checkout automático para controlar
-     * explícitamente la etapa "Get Code".
+     * Se anaden marcas de tiempo y soporte para colores ANSI.
+     * Se deshabilita el checkout automatico para controlar
+     * explicitamente la etapa "Get Code".
      ******************************************************************/
     options {
         timestamps()
@@ -41,7 +41,7 @@ pipeline {
 
                 echo '==========================================='
                 echo 'CP1.4 - RETO 1'
-                echo 'Pipeline de Integración Continua (CI)'
+                echo 'Pipeline de Integracion Continua (CI)'
                 echo 'Entorno de despliegue: STAGING'
                 echo '==========================================='
 
@@ -56,6 +56,7 @@ pipeline {
 
             steps {
                 git branch: 'develop',
+                credentialsId: 'github-pat',
                     url: 'https://github.com/guarrior-labs/todo-list-aws.git'
             }
         }
@@ -155,16 +156,25 @@ pipeline {
         stage('Promover') {
 
             steps {
-
+                
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'github-pat',
+                        usernameVariable: 'GITHUB_USER',
+                        passwordVariable: 'GITHUB_PAT'
+                    )
+                ]) 
+                
+                {
                 sh '''
                     git checkout master
                     git pull origin master
                     git merge develop
-                    # git push origin master
-                '''
-
+                    
+                    git push https://${GITHUB_USER}:${GITHUB_PAT}@github.com/guarrior-labs/todo-list-aws.git master
+                    '''
+                }
             }
-
         }
 
     }
