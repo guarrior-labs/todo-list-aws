@@ -60,7 +60,16 @@ pipeline {
         
                 // Guarda el codigo y la configuracion para las etapas
                 // posteriores del pipeline.                    
-                stash name: 'source', includes: '**/*'
+                //stash name: 'source', includes: '**/*'
+                stash(
+                    name: 'source',
+                    includes: '**/*',
+                    excludes: '''
+                    .git/**,
+                    .aws-sam/**,
+                    reports/**,
+                    result-rest.xml
+                    '''
             }
         }
 
@@ -386,11 +395,17 @@ pipeline {
                 
                 {
                 sh '''
-                    # Cambia a la rama master
+                    # Elimina la configuración descargada del repositorio de configuración.
+                    rm -f samconfig.toml
+                
+                    # Elimina únicamente archivos no versionados.
+                    git clean -fd
+                
+                    git fetch origin
+                
                     git checkout master
 
                     # Actualiza la rama local con el estado del remoto
-                    git fetch origin
                     git reset --hard origin/master
 
                     # Integra los cambios validados de develop
