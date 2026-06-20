@@ -48,7 +48,18 @@ pipeline {
                 git branch: 'master',
                     credentialsId: 'github-pat',
                     url: 'https://github.com/guarrior-labs/todo-list-aws.git'
-                
+
+                // Descarga unicamente el fichero de configuracion
+                // correspondiente al entorno de Production desde el
+                // repositorio de configuración.
+                sh '''
+                    curl -L \
+                    https://raw.githubusercontent.com/guarrior-labs/todo-list-aws-config/production/samconfig.toml \
+                    -o samconfig.toml
+                '''
+        
+                // Guarda el codigo y la configuracion para las etapas
+                // posteriores del pipeline.                    
                 stash name: 'source', includes: '**/*'
             }
         }
