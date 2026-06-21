@@ -66,13 +66,13 @@ pipeline {
                 // correspondiente al entorno de Staging o Production,
                 // desde el repositorio de configuracion.
                 // CAT, valida contenido de samconfig descargado.
-                sh '''
+                sh """
                     curl -L \
                     https://raw.githubusercontent.com/guarrior-labs/todo-list-aws-config/${env.CONFIG_ENV}/samconfig.toml \
                     -o samconfig.toml
 
                     cat samconfig.toml
-                '''
+                """
                 
                 // Guarda archivos para las etapas posteriores.                
                 stash(
