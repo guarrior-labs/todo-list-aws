@@ -403,25 +403,27 @@ pipeline {
                 
                     # Elimina únicamente archivos no versionados.
                     git clean -fd
+                    
+                    # Configura la identidad del usuario que realizara el merge.
+                    git config user.name "Jenkins"
+                    git config user.email "jenkins@localhost"
                 
-                    git fetch origin
+                    # Descarga la rama master, ya que el Multibranch solo ha descargado develop.
+                    git fetch origin master
                 
-                    git checkout master
-
-                    # Actualiza la rama local con el estado del remoto
-                    git reset --hard origin/master
-
-                    # Integra los cambios validados de develop, 
+                    # Crea (o actualiza) la rama local master a partir de origin/master.
+                    git checkout -B master origin/master
+                
+                    # Integra los cambios validados de develop,
                     # evitando que Git solicite mensajes de merge.
                     git merge origin/develop --no-edit
-
-                    # Publica la nueva version en el repositorio remoto
+                
+                    # Publica la nueva versión en el repositorio remoto.
                     git push https://${GITHUB_USER}:${GITHUB_PAT}@github.com/guarrior-labs/todo-list-aws.git master
                 '''
                 }
             }
         }
-
     }
 
     /******************************************************************
