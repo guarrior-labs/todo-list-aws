@@ -276,10 +276,12 @@ pipeline {
                             -o ${REPORTS}/bandit.txt \
                             --exit-zero
                         '''
-
-                        //No aporta nuevos archivos.
-                        //stash name: 'source', includes: '**/*'
-
+                        
+                        //Comparte reportes con etapa informes
+                         stash(
+                            name: 'static-reports',
+                            includes: 'reports/**'
+                        )
                     }
 
                 }
@@ -339,7 +341,7 @@ pipeline {
                                 }
                                 sh pytestCmd
 
-                                stash name: 'junit-report', includes: 'result-rest.xml'
+                                stash name: 'rest-report', includes: 'result-rest.xml'
                             }
 
                         }
@@ -362,8 +364,12 @@ pipeline {
             
             steps {
 
-                unstash 'source'
-
+                unstash 'static-reports'
+                
+                sh '''
+                echo "Contenido reportes recibidos:"
+                find reports -type f
+                '''
                 archiveArtifacts(
                     artifacts: "${REPORTS}/*",
                     fingerprint: true,
@@ -415,11 +421,11 @@ git show-ref
 git remote -v
 git rev-parse HEAD
                 
-                    # Descarga la rama master, ya que el Multibranch solo ha descargado develop.
-                    git fetch origin master
+                    # Descarga todas las ramas.
+                    git fetch --all --prune
                     
 git branch -a
-git show-re
+git show-ref
 git rev-parse origin/master
                 
                     # Crea (o actualiza) la rama local master a partir de origin/master.
@@ -445,7 +451,7 @@ git rev-parse origin/master
 
             script {
                 try {
-                    unstash 'junit-report'
+                    unstash 'rest-report'
     
                     junit(
                         allowEmptyResults: true,
