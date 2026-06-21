@@ -407,9 +407,20 @@ pipeline {
                     # Configura la identidad del usuario que realizara el merge.
                     git config user.name "Jenkins"
                     git config user.email "jenkins@localhost"
+
+pwd
+git status
+git branch -a
+git show-ref
+git remote -v
+git rev-parse HEAD
                 
                     # Descarga la rama master, ya que el Multibranch solo ha descargado develop.
                     git fetch origin master
+                    
+git branch -a
+git show-re
+git rev-parse origin/master
                 
                     # Crea (o actualiza) la rama local master a partir de origin/master.
                     git checkout -B master origin/master
