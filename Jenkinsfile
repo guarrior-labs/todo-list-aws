@@ -420,6 +420,12 @@ git branch -a
 git show-ref
 git remote -v
 git rev-parse HEAD
+
+echo "========== CONFIG REMOTA =========="
+git config --get remote.origin.fetch
+
+echo "========== REMOTO =========="
+git remote show origin
                 
                     # Descarga todas las ramas.
                     git fetch --all --prune
