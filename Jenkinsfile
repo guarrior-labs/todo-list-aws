@@ -47,9 +47,11 @@ pipeline {
                 checkout scm
 
                 //Detecta entorno dependiendo de rama.
-                env.CONFIG_ENV = (env.BRANCH_NAME == 'master')
-                    ? 'production'
-                    : 'staging'
+                script {
+                    env.CONFIG_ENV = (env.BRANCH_NAME == 'master')
+                        ? 'production'
+                        : 'staging'
+                }
 
                 echo "Rama.............: ${env.BRANCH_NAME}"
                 echo "Entorno..........: ${env.CONFIG_ENV}"
@@ -428,16 +430,18 @@ pipeline {
     post {
         always {
 
-            try {
-                unstash 'junit-report'
-
-                junit(
-                    allowEmptyResults: true,
-                    testResults: 'result-rest.xml'
-                )
-
-            } catch (Exception e) {
-                echo "No fue posible publicar el informe JUnit: ${e.getMessage()}"
+            script {
+                try {
+                    unstash 'junit-report'
+    
+                    junit(
+                        allowEmptyResults: true,
+                        testResults: 'result-rest.xml'
+                    )
+    
+                } catch (Exception e) {
+                    echo "No fue posible publicar el informe JUnit: ${e.getMessage()}"
+                }
             }
             
             //Limpia de nuevo para no dejar residuos en el agente.
