@@ -428,7 +428,9 @@ echo "========== REMOTO =========="
 git remote show origin
                 
                     # Descarga todas las ramas.
-                    git fetch --all --prune
+                    git fetch origin \
+                        develop:refs/remotes/origin/develop \
+                        master:refs/remotes/origin/master
                     
 git branch -a
 git show-ref
@@ -440,6 +442,7 @@ git rev-parse origin/master
                     # Integra los cambios validados de develop,
                     # evitando que Git solicite mensajes de merge.
                     git merge origin/develop --no-edit
+                    git switch -C master origin/master
                 
                     # Publica la nueva versión en el repositorio remoto.
                     git push https://${GITHUB_USER}:${GITHUB_PAT}@github.com/guarrior-labs/todo-list-aws.git master
